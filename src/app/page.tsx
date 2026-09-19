@@ -192,6 +192,14 @@ export default function Home() {
   }, []);
 
   return (
+    <header className="w-full pt-6 pb-2 flex justify-center">
+      <h1
+        className="text-2xl tracking-[0.2em] text-slate-200/90"
+        style={{ fontFamily: "var(--font-lora), serif" }}
+      >
+        Pulses
+      </h1>
+    </header>
     <main className="min-h-screen bg-[#0B0D10] flex flex-col items-center pb-16">
       {/* Shared positioning container for canvas overlay */}
       <div ref={containerRef} className="relative w-full max-w-md">
