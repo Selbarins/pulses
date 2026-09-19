@@ -1,5 +1,12 @@
 import type { Metadata, Viewport } from "next";
+import { Lora } from "next/font/google";
 import "./globals.css";
+
+const lora = Lora({
+  subsets: ["latin"],
+  variable: "--font-lora",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Pulses",
@@ -25,7 +32,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className={lora.variable}>
       <head>
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       </head>
