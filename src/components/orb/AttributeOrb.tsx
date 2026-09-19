@@ -84,7 +84,7 @@ export default function AttributeOrb({
   className = "",
 }: AttributeOrbProps) {
   // Always square so it stays a sphere
-  const dim = size === "lg" ? 180 : size === "md" ? 120 : 72;
+    const dim = size === "lg" ? 180 : size === "md" ? 120 : 56;
 
   return (
     <div
