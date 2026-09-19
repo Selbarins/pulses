@@ -26,13 +26,16 @@ const ARC_ITEMS = [
 ] as const;
 
 // Particle config per stream
-const PARTICLE_COUNT = 6;
+const PARTICLE_COUNT = 18;
+const STREAMS_PER_ORB = 3;
 
 interface Particle {
-  t: number;       // 0–1 progress along path
-  speed: number;   // units/sec
-  size: number;    // radius px
+  t: number;
+  speed: number;
+  size: number;
   opacity: number;
+  stream: number; // 0 .. STREAMS_PER_ORB-1
+  lateral: number; // sideways offset
 }
 
 // Quadratic bezier point
@@ -64,17 +67,19 @@ export default function Home() {
   const orbRowRef    = useRef<HTMLDivElement>(null);
   const rafRef       = useRef<number>(0);
 
-  // One set of particles per stream (5 streams)
-  const particles = useRef<Particle[][]>(
-    ARC_ITEMS.map(() =>
-      Array.from({ length: PARTICLE_COUNT }, (_, i) => ({
-        t:       i / PARTICLE_COUNT,
-        speed:   0.18 + Math.random() * 0.1,
-        size:    1.5 + Math.random() * 1.5,
-        opacity: 0.4 + Math.random() * 0.5,
-      }))
-    )
-  );
+    // One set of particles per attribute (multi-stream energy)
+    const particles = useRef<Particle[][]>(
+      ARC_ITEMS.map(() =>
+        Array.from({ length: PARTICLE_COUNT }, (_, i) => ({
+          t: i / PARTICLE_COUNT,
+          speed: 0.22 + Math.random() * 0.18,
+          size: 1.2 + Math.random() * 2.2,
+          opacity: 0.35 + Math.random() * 0.55,
+          stream: i % STREAMS_PER_ORB,
+          lateral: (i % STREAMS_PER_ORB - 1) * 14,
+        }))
+      )
+    );
 
   useEffect(() => {
     const canvas    = canvasRef.current;
@@ -134,49 +139,43 @@ export default function Home() {
         const orb = centers[idx];
         if (!orb) return;
 
-        // Control point: midpoint pulled toward soul orb horizontally
-        const cpx = (orb.x + soul.x) / 2;
-        const cpy = (orb.y + soul.y) / 2 - 40; // slight upward bow on path
-
         const stream = particles.current[idx];
 
-        stream.forEach((p) => {
-          // advance
+                stream.forEach((p) => {
           p.t += delta * p.speed;
           if (p.t > 1) {
-            p.t     = 0;
-            p.speed   = 0.18 + Math.random() * 0.1;
-            p.size    = 1.5  + Math.random() * 1.5;
-            p.opacity = 0.4  + Math.random() * 0.5;
+            p.t = 0;
+            p.speed = 0.22 + Math.random() * 0.18;
+            p.size = 1.2 + Math.random() * 2.2;
+            p.opacity = 0.35 + Math.random() * 0.55;
           }
 
-          // fade in near start, fade out near soul
-          const fade = p.t < 0.15
-            ? p.t / 0.15
-            : p.t > 0.75
-            ? 1 - (p.t - 0.75) / 0.25
-            : 1;
+          const fade =
+            p.t < 0.12 ? p.t / 0.12 :
+            p.t > 0.78 ? 1 - (p.t - 0.78) / 0.22 : 1;
 
-          const px = bezier(orb.x, cpx, soul.x, p.t);
-          const py = bezier(orb.y, cpy, soul.y, p.t);
+          const cpx2 = (orb.x + soul.x) / 2 + p.lateral * 0.4;
+          const cpy2 = (orb.y + soul.y) / 2 - 50;
+          const side = p.lateral * Math.sin(p.t * Math.PI);
 
-          // glow
-          const grd = ctx.createRadialGradient(px, py, 0, px, py, p.size * 3);
-          grd.addColorStop(0,   item.color + "cc");
-          grd.addColorStop(0.4, item.color + "55");
-          grd.addColorStop(1,   item.color + "00");
+          const px = bezier(orb.x, cpx2, soul.x, p.t) + side * 0.35;
+          const py = bezier(orb.y, cpy2, soul.y, p.t);
+
+          const grd = ctx.createRadialGradient(px, py, 0, px, py, p.size * 3.5);
+          grd.addColorStop(0, item.color + "dd");
+          grd.addColorStop(0.45, item.color + "66");
+          grd.addColorStop(1, item.color + "00");
 
           ctx.globalAlpha = p.opacity * fade;
-          ctx.fillStyle   = grd;
+          ctx.fillStyle = grd;
           ctx.beginPath();
-          ctx.arc(px, py, p.size * 3, 0, Math.PI * 2);
+          ctx.arc(px, py, p.size * 3.2, 0, Math.PI * 2);
           ctx.fill();
 
-          // bright core dot
-          ctx.globalAlpha = p.opacity * fade * 0.9;
-          ctx.fillStyle   = item.color;
+          ctx.globalAlpha = p.opacity * fade * 0.95;
+          ctx.fillStyle = item.color;
           ctx.beginPath();
-          ctx.arc(px, py, p.size * 0.6, 0, Math.PI * 2);
+          ctx.arc(px, py, p.size * 0.7, 0, Math.PI * 2);
           ctx.fill();
         });
       });
@@ -209,23 +208,25 @@ export default function Home() {
           style={{ zIndex: 10 }}
         />
 
-        {/* Attribute Orbs — inverted arc (outer orbs higher) */}
+                {/* Attribute Orbs — responsive, no clip */}
         <div
           ref={orbRowRef}
-          className="relative flex justify-center items-end gap-6 px-4 pb-8"
+          className="relative flex justify-between items-end px-3 sm:px-4 pb-8 gap-1 sm:gap-3"
           style={{ zIndex: 20 }}
         >
           {ARC_ITEMS.map(({ name, label, href, ty }) => (
             <Link
               key={name}
               href={href}
-              className="flex flex-col items-center"
-              style={{ transform: `translateY(${ty}px)` }}
+              className="flex flex-col items-center flex-1 min-w-0"
+              style={{ transform: `translateY(${ty * 0.65}px)` }}
             >
-              <div style={{ width: 72, height: 72 }}>
+              <div className="w-[56px] h-[56px] sm:w-[64px] sm:h-[64px]">
                 <AttributeOrb attribute={name} level01={level01(name)} size="sm" />
               </div>
-              <span className="text-[11px] text-slate-400 mt-1">{label}</span>
+              <span className="text-[10px] sm:text-[11px] text-slate-400 mt-1 truncate w-full text-center">
+                {label}
+              </span>
             </Link>
           ))}
         </div>
