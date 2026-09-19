@@ -16,7 +16,7 @@ export default function OrbSignals({
   streak = 9,
   multiplier = 1.25,
   burden = 0.35,
-  burdenActive = false,
+  burdenActive={true},
 }: OrbSignalsProps) {
   return (
     <div className="w-full max-w-md px-4 mt-2 mb-4 space-y-3">
