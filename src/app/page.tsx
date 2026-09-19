@@ -6,6 +6,7 @@ import AttributeOrb from "@/components/orb/AttributeOrb";
 import { orbStateFromStats } from "@/lib/orb/fromStats";
 import type { Attribute } from "@/types/attributes";
 import { useState, useEffect, useRef } from "react";
+import OrbSignals from "@/components/home/OrbSignals";
 
 const INITIAL: Attribute[] = [
   { name: "wealth",     level: 3, currentXp: 420, xpToNext: 1000, multiplier: 1.1  },
@@ -191,7 +192,7 @@ export default function Home() {
     };
   }, []);
 
-    return (
+  return (
     <main className="min-h-screen bg-[#0B0D10] flex flex-col items-center pb-16">
       <header className="w-full pt-6 pb-2 flex justify-center">
         <h1
@@ -201,9 +202,9 @@ export default function Home() {
           Pulses
         </h1>
       </header>
+
       {/* Shared positioning container for canvas overlay */}
       <div ref={containerRef} className="relative w-full max-w-md">
-
         {/* Soul Orb */}
         <div className="soul-orb-wrapper w-full">
           <SoulOrb state={state} />
@@ -216,7 +217,7 @@ export default function Home() {
           style={{ zIndex: 10 }}
         />
 
-                {/* Attribute Orbs — responsive, no clip */}
+        {/* Attribute Orbs — responsive, no clip */}
         <div
           ref={orbRowRef}
           className="relative flex justify-between items-end px-3 sm:px-4 pb-8 gap-1 sm:gap-3"
@@ -238,8 +239,17 @@ export default function Home() {
             </Link>
           ))}
         </div>
-
       </div>
+
+      {/* Game signals UNDER the small orbs */}
+      <OrbSignals
+        level={4}
+        energy={0.72}
+        streak={9}
+        multiplier={1.25}
+        burdenActive={false}
+        burden={0.35}
+      />
     </main>
   );
 }
