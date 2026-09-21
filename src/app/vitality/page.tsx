@@ -1,5 +1,6 @@
 "use client";
 
+import InsightsStrip from "@/components/vitality/InsightsStrip";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import AttributeShell from "@/components/layout/AttributeShell";
 import type { Attribute } from "@/types/attributes";
@@ -150,6 +151,8 @@ export default function VitalityPage() {
         />
 
         <TodaySummary log={log} breakdown={breakdown} />
+
+        <InsightsStrip history={history} todayLog={log} training={training} />
 
         <GlycemiaCard
         value={log.glycemia}
