@@ -257,9 +257,9 @@ const CORE_VERT = /* glsl */ `
         isMomentum   * GREEN +
         isDiscipline * RED;
 
-    // always attribute color; level only scales intensity
-    float intensity = 0.25 + groupLevel * 0.75; // lvl1 soft, lvl20 full
-    vec3 col = attrCol;                       // always the attribute color
+    // level fully controls presence — 0 = that attribute slot is off
+    float intensity = groupLevel;             // 0 → no contribution
+    vec3 col = attrCol;
     
     float size = uSize * (0.62 + aRand.y * 0.95) * (0.72 + uEnergy * 0.55);
     float bright = (0.4 + uEnergy * 0.4) * intensity;
@@ -345,10 +345,9 @@ const CORE_VERT = /* glsl */ `
       hash(vec2(aRand.w + 2.7, uTime * 3.1))
     ) - 0.5) * uDebt * 0.07;
 
-    // ---- opacity: base + group level (weak attributes fade out) ------------
+    // ---- opacity: slot vanishes when its attribute is 0 --------------------
     float energyDrop = smoothstep(0.35, 0.0, uEnergy);
-    // base visibility always present; level mainly drives color intensity
-    float alpha = 0.35 + uEnergy * 0.35 + groupLevel * 0.2;
+    float alpha = (0.10 + uEnergy * 0.30) * (0.08 + groupLevel * 0.92);
     alpha *= 1.0 - energyDrop * 0.5 * step(aRand.y, 0.55);
 
     // instability: dropout + jitter + glitch
