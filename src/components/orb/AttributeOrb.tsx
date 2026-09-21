@@ -4,8 +4,8 @@ import { Canvas, useFrame } from "@react-three/fiber";
 import { useMemo, useRef } from "react";
 import * as THREE from "three";
 
-const COUNT = 2200;          // denser (was 1400)
-const RADIUS = 1.05;
+const COUNT = 1100;          // was 2200 → much less dense
+const RADIUS = 1.0;
 
 const ATTR_COLORS: Record<string, string> = {
   wealth: "#FFD666",
@@ -36,7 +36,7 @@ function ParticleAttribute({ color, level01 }: { color: string; level01: number 
       const azim = Math.PI * (1 + Math.sqrt(5)) * i;
 
       // More volumetric shell (closer to SoulOrb feel)
-      const r = RADIUS * (0.70 + Math.random() * 0.30);
+      const r = RADIUS * (0.78 + Math.random() * 0.22);  // less volumetric than 0.70–1.00
 
       positions[i * 3] = r * Math.sin(incl) * Math.cos(azim);
       positions[i * 3 + 1] = r * Math.sin(incl) * Math.sin(azim);
