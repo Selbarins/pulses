@@ -11,28 +11,26 @@ interface Props {
 export default function SleepCard({ hours, quality, onLog }: Props) {
   const [h, setH] = useState(hours?.toString() ?? "");
   const [q, setQ] = useState<1 | 2 | 3 | 4 | 5>(quality ?? 3);
-
-  const handleLog = () => {
-    const n = parseFloat(h);
-    if (Number.isNaN(n) || n <= 0) return;
-    onLog(n, q);
-  };
-
   const logged = hours != null;
 
   return (
-    <section className="rounded-2xl bg-slate-900/60 p-4 space-y-3">
-      <h2 className="text-sm font-medium text-pink-300">Sleep</h2>
+    <section className="rounded-2xl border border-pink-500/15 bg-slate-900/60 p-4 space-y-3">
+      <div>
+        <p className="text-[10px] uppercase tracking-[0.15em] text-pink-400/60">
+          Quest
+        </p>
+        <h2 className="text-sm font-medium text-pink-100">Sleep</h2>
+      </div>
 
-      <div className="flex gap-2 items-center">
+      <div className="flex items-center gap-2">
         <input
           type="number"
           inputMode="decimal"
           step="0.5"
-          placeholder="Hours"
+          placeholder="0"
           value={h}
           onChange={(e) => setH(e.target.value)}
-          className="w-24 rounded-xl bg-slate-800 border border-slate-700 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-pink-500/50"
+          className="w-20 rounded-xl bg-slate-950/80 border border-slate-700/80 px-3 py-2.5 text-sm text-white text-center focus:outline-none focus:border-pink-500/50"
         />
         <span className="text-xs text-slate-500">hours</span>
       </div>
@@ -42,30 +40,28 @@ export default function SleepCard({ hours, quality, onLog }: Props) {
           <button
             key={n}
             onClick={() => setQ(n)}
-            className={`flex-1 py-2 rounded-xl text-sm font-medium transition ${
+            className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition ${
               q === n
-                ? "bg-pink-600/80 text-white"
-                : "bg-slate-800 text-slate-400 hover:bg-slate-700"
+                ? "bg-pink-600 text-white shadow-[0_0_12px_rgba(236,72,153,0.4)]"
+                : "bg-slate-800/80 text-slate-500 hover:bg-slate-700"
             }`}
           >
             {n}
           </button>
         ))}
       </div>
-      <p className="text-[10px] text-slate-500 text-center">Quality 1–5</p>
+      <p className="text-[10px] text-center text-slate-500">Quality rating</p>
 
       <button
-        onClick={handleLog}
-        className="w-full py-2.5 rounded-xl bg-pink-600/80 hover:bg-pink-500 text-sm font-medium text-white transition"
+        onClick={() => {
+          const n = parseFloat(h);
+          if (Number.isNaN(n) || n <= 0) return;
+          onLog(n, q);
+        }}
+        className="w-full py-2.5 rounded-xl bg-gradient-to-r from-pink-700 to-pink-500 text-sm font-semibold text-white shadow-[0_0_20px_rgba(236,72,153,0.25)] hover:brightness-110 active:scale-[0.98] transition"
       >
-        {logged ? "Update" : "Log sleep"}
+        {logged ? "Update sleep" : "Claim XP"}
       </button>
-
-      {logged && (
-        <p className="text-xs text-slate-400">
-          Logged: {hours}h · quality {quality}/5
-        </p>
-      )}
     </section>
   );
 }
