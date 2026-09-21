@@ -190,6 +190,8 @@ export default function VitalityPage() {
           onToggle={onPracticeToggle}
         />
 
+        <Phase2Teaser unlocked={training.phase1Complete} />
+
         <NutritionCard
           proteinGoal={log.proteinGoal}
           proteinHit={log.proteinHit}
