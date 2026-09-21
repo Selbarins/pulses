@@ -7,3 +7,4 @@ export * from "./training";
 export * from "./nutrition";
 export * from "./hygiene";
 export * from "./storage";
+export * from "./history";
