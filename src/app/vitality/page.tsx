@@ -1,69 +1,138 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import AttributeShell from "@/components/layout/AttributeShell";
 import type { Attribute } from "@/types/attributes";
-import type { VitalityDayLog, TrainingType } from "@/lib/vitality";
+import type {
+  VitalityDayLog,
+  TrainingProgress,
+  PracticeId,
+  HygieneId,
+  MenuSlot,
+} from "@/lib/vitality";
 import {
   calculateVitalityXp,
   deriveEnergy,
   applyXpToVitality,
+  loadVitalityState,
+  saveVitalityState,
+  checkPhase1Complete,
+  PHASE1_RULES,
 } from "@/lib/vitality";
-import { xpRequiredForLevel } from "@/lib/xp/leveling";
 
+import LevelProgress from "@/components/vitality/LevelProgress";
+import TodaySummary from "@/components/vitality/TodaySummary";
 import GlycemiaCard from "@/components/vitality/GlycemiaCard";
 import SleepCard from "@/components/vitality/SleepCard";
 import TrainingCard from "@/components/vitality/TrainingCard";
-import ProteinCard from "@/components/vitality/ProteinCard";
+import NutritionCard from "@/components/vitality/NutritionCard";
 import HygieneCard from "@/components/vitality/HygieneCard";
-import LevelProgress from "@/components/vitality/LevelProgress";
-import TodaySummary from "@/components/vitality/TodaySummary";
-
-function todayDate() {
-  // Casablanca-friendly simple date for now
-  return new Date().toISOString().slice(0, 10);
-}
-
-const INITIAL_ATTR: Attribute = {
-  name: "vitality",
-  level: 2,
-  currentXp: 180,
-  xpToNext: xpRequiredForLevel(3),
-  multiplier: 1.0,
-};
 
 export default function VitalityPage() {
-  const [attr, setAttr] = useState<Attribute>(INITIAL_ATTR);
-  const [log, setLog] = useState<VitalityDayLog>({ date: todayDate() });
+  const [attr, setAttr] = useState<Attribute | null>(null);
+  const [log, setLog] = useState<VitalityDayLog | null>(null);
+  const [training, setTraining] = useState<TrainingProgress | null>(null);
   const [prevTotal, setPrevTotal] = useState(0);
+  const [ready, setReady] = useState(false);
 
-  const breakdown = useMemo(() => calculateVitalityXp(log), [log]);
-  const todayXp = breakdown.total;
-  const level01 = Math.min(1, Math.max(0, (attr.level - 1) / 19));
+  // Load once
+  useEffect(() => {
+    const s = loadVitalityState();
+    setAttr(s.attribute);
+    setLog(s.dayLog);
+    setTraining(s.training);
+    setPrevTotal(calculateVitalityXp(s.dayLog).total);
+    setReady(true);
+  }, []);
 
-  // Recompute XP delta and apply to attribute whenever log changes
-  const applyLog = (next: VitalityDayLog) => {
-    const withEnergy = { ...next, energy: deriveEnergy(next) };
-    const nextBreakdown = calculateVitalityXp(withEnergy);
-    const delta = nextBreakdown.total - prevTotal;
+  // Persist whenever state changes
+  useEffect(() => {
+    if (!ready || !attr || !log || !training) return;
+    saveVitalityState(attr, log, training);
+  }, [attr, log, training, ready]);
 
-    setLog(withEnergy);
-    setPrevTotal(nextBreakdown.total);
+  const breakdown = useMemo(
+    () => (log ? calculateVitalityXp(log) : { glycemia: 0, sleep: 0, training: 0, protein: 0, hygiene: 0, total: 0 }),
+    [log]
+  );
 
-    if (delta > 0) {
-      setAttr((a) => applyXpToVitality(a, delta));
-    }
-    // Note: if user lowers a value, we don't remove XP in this simple version
+  const applyLog = useCallback(
+    (next: VitalityDayLog, trainingPatch?: Partial<TrainingProgress>) => {
+      if (!attr || !training) return;
+
+      const withEnergy = { ...next, energy: deriveEnergy(next) };
+      const nextBreakdown = calculateVitalityXp(withEnergy);
+      const delta = nextBreakdown.total - prevTotal;
+
+      let nextTraining = trainingPatch
+        ? { ...training, ...trainingPatch }
+        : training;
+
+      // Phase 1 completion bonus
+      if (
+        !nextTraining.phase1Complete &&
+        checkPhase1Complete(nextTraining)
+      ) {
+        nextTraining = { ...nextTraining, phase1Complete: true };
+        // bonus applied as extra delta
+        setAttr((a) =>
+          a
+            ? applyXpToVitality(
+                applyXpToVitality(a, Math.max(0, delta)),
+                PHASE1_RULES.completionBonusXp
+              )
+            : a
+        );
+      } else if (delta > 0) {
+        setAttr((a) => (a ? applyXpToVitality(a, delta) : a));
+      }
+
+      setLog(withEnergy);
+      setPrevTotal(nextBreakdown.total);
+      setTraining(nextTraining);
+    },
+    [attr, training, prevTotal]
+  );
+
+  const onPractice = (id: PracticeId) => {
+    if (!log || !training) return;
+    if (log.practicesToday?.includes(id)) return;
+
+    const practicesToday = [...(log.practicesToday ?? []), id];
+    const practiceCounts = {
+      ...training.practiceCounts,
+      [id]: (training.practiceCounts[id] ?? 0) + 1,
+    };
+    const fullSession = practicesToday.length >= 3;
+    const sessionsCompleted =
+      fullSession && !log.fullSession
+        ? training.sessionsCompleted + 1
+        : training.sessionsCompleted;
+
+    applyLog(
+      { ...log, practicesToday, fullSession },
+      { practiceCounts, sessionsCompleted }
+    );
   };
+
+  if (!ready || !attr || !log || !training) {
+    return (
+      <main className="min-h-screen bg-[#0B0D10] flex items-center justify-center">
+        <p className="text-slate-500 text-sm animate-pulse">Loading Vitality…</p>
+      </main>
+    );
+  }
+
+  const level01 = Math.min(1, Math.max(0, (attr.level - 1) / 19));
 
   return (
     <AttributeShell attribute="vitality" level01={level01} title="Vitality">
-      <div className="space-y-4 mt-4">
+      <div className="space-y-4 mt-4 pb-8">
         <LevelProgress
           level={attr.level}
           currentXp={attr.currentXp}
           xpToNext={attr.xpToNext}
-          todayXp={todayXp}
+          todayXp={breakdown.total}
         />
 
         <TodaySummary log={log} breakdown={breakdown} />
@@ -85,25 +154,30 @@ export default function VitalityPage() {
         />
 
         <TrainingCard
-          trained={log.trained}
-          trainingType={log.trainingType}
-          onLog={(trained, type: TrainingType) =>
-            applyLog({
-              ...log,
-              trained,
-              trainingType: trained ? type : undefined,
-            })
-          }
+          practicesToday={log.practicesToday ?? []}
+          training={training}
+          onPractice={onPractice}
         />
 
-        <ProteinCard
-          proteinOk={log.proteinOk}
-          onLog={(ok) => applyLog({ ...log, proteinOk: ok })}
+        <NutritionCard
+          proteinGoal={log.proteinGoal}
+          proteinHit={log.proteinHit}
+          menus={log.menus}
+          shoppingNeeded={log.shoppingNeeded}
+          onUpdate={(patch) => applyLog({ ...log, ...patch })}
         />
 
         <HygieneCard
-          done={log.hygieneDone}
-          onLog={(done) => applyLog({ ...log, hygieneDone: done })}
+          hygiene={log.hygiene}
+          onToggle={(id: HygieneId) =>
+            applyLog({
+              ...log,
+              hygiene: {
+                ...log.hygiene,
+                [id]: !log.hygiene?.[id],
+              },
+            })
+          }
         />
       </div>
     </AttributeShell>
