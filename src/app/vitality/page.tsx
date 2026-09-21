@@ -152,20 +152,34 @@ export default function VitalityPage() {
         <TodaySummary log={log} breakdown={breakdown} />
 
         <GlycemiaCard
-          value={log.glycemia}
-          inTarget={log.glycemiaInTarget}
-          onLog={(glycemia, inTarget) =>
-            setDayLog({ ...log, glycemia, glycemiaInTarget: inTarget })
-          }
-        />
+        value={log.glycemia}
+        inTarget={log.glycemiaInTarget}
+        onLog={(glycemia, inTarget) =>
+          setDayLog({ ...log, glycemia, glycemiaInTarget: inTarget })
+        }
+        onClear={() => {
+          setDayLog({
+            ...log,
+            glycemia: undefined,
+            glycemiaInTarget: undefined,
+          });
+        }}
+      />
 
         <SleepCard
-          hours={log.sleepHours}
-          quality={log.sleepQuality}
-          onLog={(hours, quality) =>
-            setDayLog({ ...log, sleepHours: hours, sleepQuality: quality })
-          }
-        />
+        hours={log.sleepHours}
+        quality={log.sleepQuality}
+        onLog={(hours, quality) =>
+          setDayLog({ ...log, sleepHours: hours, sleepQuality: quality })
+        }
+        onClear={() => {
+          setDayLog({
+            ...log,
+            sleepHours: undefined,
+            sleepQuality: undefined,
+          });
+        }}
+      />
 
         <TrainingCard
           practicesToday={log.practicesToday ?? []}
