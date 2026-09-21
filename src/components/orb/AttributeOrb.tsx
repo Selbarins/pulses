@@ -4,8 +4,8 @@ import { Canvas, useFrame } from "@react-three/fiber";
 import { useMemo, useRef } from "react";
 import * as THREE from "three";
 
-const COUNT = 1400;
-const RADIUS = 1.0;
+const COUNT = 2200;          // denser (was 1400)
+const RADIUS = 1.05;
 
 const ATTR_COLORS: Record<string, string> = {
   wealth: "#FFD666",
@@ -35,8 +35,8 @@ function ParticleAttribute({ color, level01 }: { color: string; level01: number 
       const incl = Math.acos(1 - 2 * t);
       const azim = Math.PI * (1 + Math.sqrt(5)) * i;
 
-      // Tight sphere
-      const r = RADIUS * (0.88 + Math.random() * 0.12);
+      // More volumetric shell (closer to SoulOrb feel)
+      const r = RADIUS * (0.70 + Math.random() * 0.30);
 
       positions[i * 3] = r * Math.sin(incl) * Math.cos(azim);
       positions[i * 3 + 1] = r * Math.sin(incl) * Math.sin(azim);
@@ -51,30 +51,56 @@ function ParticleAttribute({ color, level01 }: { color: string; level01: number 
     return { positions, colors: colorsArr };
   }, [color, level01]);
 
-  useFrame((_, delta) => {
-    if (!pointsRef.current) return;
-    const speed = 0.15 + level01 * 0.35;
-    pointsRef.current.rotation.y += delta * speed;
-    pointsRef.current.rotation.x += delta * speed * 0.22;
-  });
+  useFrame((state, delta) => {
+  if (!pointsRef.current) return;
+
+  // Faster base rotation + stronger level influence
+  const speed = 0.28 + level01 * 0.55;
+  pointsRef.current.rotation.y += delta * speed;
+  pointsRef.current.rotation.x += delta * speed * 0.28;
+
+  // Subtle organic breath / pulse (very small so it stays elegant)
+  const t = state.clock.elapsedTime;
+  const breathe = 1 + Math.sin(t * (1.1 + level01 * 0.6)) * (0.018 + level01 * 0.012);
+  pointsRef.current.scale.setScalar(breathe);
+});
 
   return (
-    <points ref={pointsRef}>
-      <bufferGeometry>
-        <bufferAttribute attach="attributes-position" args={[positions, 3]} />
-        <bufferAttribute attach="attributes-color" args={[colors, 3]} />
-      </bufferGeometry>
-      <pointsMaterial
-        size={0.058}
-        vertexColors
-        transparent
-        opacity={0.95}
-        sizeAttenuation
-        depthWrite={false}
-        blending={THREE.AdditiveBlending}
-      />
-    </points>
-  );
+  <points ref={pointsRef}>
+    <bufferGeometry>
+      <bufferAttribute attach="attributes-position" args={[positions, 3]} />
+      <bufferAttribute attach="attributes-color" args={[colors, 3]} />
+    </bufferGeometry>
+    <shaderMaterial
+      transparent
+      depthWrite={false}
+      blending={THREE.AdditiveBlending}
+      vertexShader={`
+        attribute vec3 color;
+        varying vec3 vColor;
+        varying float vAlpha;
+        void main() {
+          vColor = color;
+          vAlpha = 0.85;
+          vec4 mv = modelViewMatrix * vec4(position, 1.0);
+          gl_Position = projectionMatrix * mv;
+          gl_PointSize = 0.065 * (300.0 / -mv.z);   // slightly larger soft points
+        }
+      `}
+      fragmentShader={`
+        varying vec3 vColor;
+        varying float vAlpha;
+        void main() {
+          float d = length(gl_PointCoord - 0.5) * 2.0;
+          float core = clamp(1.0 - d, 0.0, 1.0);
+          // same soft glow formula as SoulOrb
+          float a = pow(core, 2.1) + pow(core, 6.5) * 0.75;
+          gl_FragColor = vec4(vColor, a * vAlpha);
+        }
+      `}
+    />
+  </points>
+);
 }
 
 export default function AttributeOrb({
