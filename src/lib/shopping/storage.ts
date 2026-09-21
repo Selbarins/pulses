@@ -19,11 +19,13 @@ export function saveCart(state: ShoppingState) {
 export function newItem(
   partial: Omit<CartItem, "id" | "createdAt" | "checked">
 ): CartItem {
+  const now = new Date().toISOString();
   return {
     ...partial,
     id: crypto.randomUUID(),
     checked: false,
-    createdAt: new Date().toISOString(),
+    createdAt: now,
+    updatedAt: now,
   };
 }
 
