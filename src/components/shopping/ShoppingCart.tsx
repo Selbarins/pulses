@@ -57,7 +57,16 @@ export default function ShoppingCart({
 
   const toggle = (id: string) => {
     persist(
-      items.map((i) => (i.id === id ? { ...i, checked: !i.checked } : i))
+      items.map((i) =>
+        i.id === id
+          ? {
+              ...i,
+              checked: !i.checked,
+              checkedAt: !i.checked ? new Date().toISOString() : undefined,
+              updatedAt: new Date().toISOString(),
+            }
+          : i
+      )
     );
   };
 
