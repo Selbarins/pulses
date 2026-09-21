@@ -7,9 +7,10 @@ interface Props {
   value?: number;
   inTarget?: boolean;
   onLog: (glycemia: number, inTarget: boolean) => void;
+  onClear: () => void;
 }
 
-export default function GlycemiaCard({ value, inTarget, onLog }: Props) {
+export default function GlycemiaCard({ value, inTarget, onLog, onClear }: Props) {
   const [input, setInput] = useState(value?.toString() ?? "");
   const logged = value != null;
 
@@ -56,12 +57,25 @@ export default function GlycemiaCard({ value, inTarget, onLog }: Props) {
         </span>
       </div>
 
-      <button
-        onClick={handleClaim}
-        className="w-full py-2.5 rounded-xl bg-gradient-to-r from-pink-700 to-pink-500 text-sm font-semibold text-white shadow-[0_0_20px_rgba(236,72,153,0.25)] hover:brightness-110 active:scale-[0.98] transition"
-      >
-        {logged ? "Update reading" : "Claim XP"}
-      </button>
+      <div className="flex gap-2">
+        <button
+          onClick={handleClaim}
+          className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-pink-700 to-pink-500 text-sm font-semibold text-white shadow-[0_0_20px_rgba(236,72,153,0.25)] hover:brightness-110 active:scale-[0.98] transition"
+        >
+          {logged ? "Update" : "Claim XP"}
+        </button>
+        {logged && (
+          <button
+            onClick={() => {
+              setInput("");
+              onClear();
+            }}
+            className="px-4 py-2.5 rounded-xl border border-slate-600 text-xs text-slate-400 hover:text-pink-300 hover:border-pink-500/40 transition"
+          >
+            Clear
+          </button>
+        )}
+      </div>
     </section>
   );
 }
