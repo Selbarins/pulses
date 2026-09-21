@@ -27,9 +27,14 @@ export function deriveEnergy(log: VitalityDayLog): 1 | 2 | 3 | 4 | 5 | undefined
     else if (log.sleepHours >= 8) score += 1;
   }
 
-  if (log.trained) score += 0.5;
+  // Training today (any practice)
+  if ((log.practicesToday?.length ?? 0) > 0) score += 0.5;
+
+  // Glycemia off target
   if (log.glycemiaInTarget === false) score -= 0.5;
-  if (log.hygieneDone) score += 0.25;
+
+  // Any recovery item done
+  if (log.hygiene && Object.values(log.hygiene).some(Boolean)) score += 0.25;
 
   const clamped = Math.min(5, Math.max(1, Math.round(score)));
   return clamped as 1 | 2 | 3 | 4 | 5;
@@ -42,8 +47,10 @@ export function energyReason(log: VitalityDayLog): string {
   const parts: string[] = [];
   if (log.sleepQuality != null) parts.push(`Sleep quality ${log.sleepQuality}/5`);
   if (log.sleepHours != null) parts.push(`${log.sleepHours}h sleep`);
-  if (log.trained) parts.push("trained");
+  if ((log.practicesToday?.length ?? 0) > 0) parts.push("trained");
   if (log.glycemiaInTarget === false) parts.push("glycemia off-target");
-  if (log.hygieneDone) parts.push("recovery done");
+  if (log.hygiene && Object.values(log.hygiene).some(Boolean)) {
+    parts.push("recovery done");
+  }
   return parts.length ? parts.join(" · ") : "Not enough data yet";
 }
