@@ -1,6 +1,10 @@
 "use client";
 
-import { getVitalityAttributeForHome } from "@/lib/vitality";
+import {
+  getVitalityAttributeForHome,
+  loadVitalityState,
+  vitalityGlow01,
+} from "@/lib/vitality";
 import Link from "next/link";
 import SoulOrb from "@/components/orb/SoulOrb";
 import AttributeOrb from "@/components/orb/AttributeOrb";
@@ -47,34 +51,52 @@ function bezier(p0: number, p1: number, p2: number, t: number) {
 
 export default function Home() {
   const [attributes, setAttributes] = useState<Attribute[]>(INITIAL);
+  const [vitalityGlow, setVitalityGlow] = useState(0); // 0–1 from seals today
   const [streak] = useState(9);
   const [inDebt] = useState(false);
-
-  // Sync vitality from Vitality page storage (localStorage)
+  
   useEffect(() => {
     const syncVitality = () => {
-      const vitality = getVitalityAttributeForHome();
-      setAttributes((prev) =>
-        prev.map((a) => (a.name === "vitality" ? vitality : a))
-      );
+      try {
+        const { attributeBase, dayLog } = loadVitalityState();
+        // long-term level still available if you need it
+        const vitality = getVitalityAttributeForHome();
+        setAttributes((prev) =>
+          prev.map((a) => (a.name === "vitality" ? vitality : a))
+        );
+        setVitalityGlow(vitalityGlow01(dayLog));
+      } catch {
+        setVitalityGlow(0);
+      }
     };
 
-    syncVitality(); // on first load
-    window.addEventListener("focus", syncVitality); // back from /vitality
-    return () => window.removeEventListener("focus", syncVitality);
-  }, []);
+  syncVitality();
+  window.addEventListener("focus", syncVitality);
+  return () => window.removeEventListener("focus", syncVitality);
+}, []);
 
   const realState = orbStateFromStats(attributes, streak, inDebt);
-  // Use real stats from attributes (vitality comes from storage)
+
+// Override: only Vitality is live (seals); other attribute layers full
 const state = {
   ...realState,
-  // Optional: keep a floor so the orb never looks fully dead while testing
-  energy: Math.max(realState.energy, 0.35),
+  vitality: vitalityGlow,          // 0–1 from today's seals
+  wealth: 1,
+  focus: 1,
+  momentum: 1,
+  discipline: 1,
+  // brightness tracks average of the visual levels (4 max + vitality)
+  energy: Math.min(
+    1,
+    0.15 + ((1 + 1 + 1 + 1 + vitalityGlow) / 5) * 0.85
+  ),
+  // optional floor while testing:
+  // energy: Math.max(0.35, ...),
 };
 
   const level01 = (name: string) => {
-    const attr = attributes.find((a) => a.name === name);
-    return attr ? Math.min(1, Math.max(0, (attr.level - 1) / 19)) : 0;
+    if (name === "vitality") return vitalityGlow; // seals/5
+    return 1; // wealth, focus, momentum, discipline → max until implemented
   };
 
   // ── Flow animation ─────────────────────────────────────────────────────────
