@@ -1,8 +1,3 @@
-/**
- * localStorage persistence for Vitality.
- * Keeps progress when switching tabs / refreshing.
- */
-
 import type { Attribute } from "@/types/attributes";
 import type {
   VitalityDayLog,
@@ -12,21 +7,20 @@ import type {
 import { createInitialTrainingProgress } from "./training";
 import { xpRequiredForLevel } from "@/lib/xp/leveling";
 import { NUTRITION_DEFAULTS } from "./nutrition";
+import { casablancaDate } from "@/lib/utils/casablanca";
+import { calculateVitalityXp } from "./xp";
+import { applyXpToVitality } from "./leveling";
 
-const STORAGE_KEY = "pulses_vitality_v1";
+const STORAGE_KEY = "pulses_vitality_v2";
+const HISTORY_MAX = 60;
 
-function todayDate() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-export function defaultDayLog(date = todayDate()): VitalityDayLog {
+export function defaultDayLog(date = casablancaDate()): VitalityDayLog {
   return {
     date,
     proteinGoal: NUTRITION_DEFAULTS.proteinGoalGrams,
     practicesToday: [],
     hygiene: {},
     menus: {},
-    shoppingNeeded: [],
   };
 }
 
@@ -40,64 +34,92 @@ export function defaultAttribute(): Attribute {
   };
 }
 
+function toAttr(base: VitalityPersistedState["attributeBase"]): Attribute {
+  return { name: "vitality", ...base };
+}
+
+function fromAttr(a: Attribute): VitalityPersistedState["attributeBase"] {
+  return {
+    level: a.level,
+    currentXp: a.currentXp,
+    xpToNext: a.xpToNext,
+    multiplier: a.multiplier,
+  };
+}
+
+/**
+ * Load state. If dayLog is from a previous Casablanca day, seal it:
+ * apply that day's XP to attributeBase, push log to history, start fresh day.
+ */
 export function loadVitalityState(): {
-  attribute: Attribute;
+  attributeBase: Attribute;
   dayLog: VitalityDayLog;
   training: TrainingProgress;
+  history: VitalityDayLog[];
 } {
+  const today = casablancaDate();
+
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) {
       return {
-        attribute: defaultAttribute(),
-        dayLog: defaultDayLog(),
+        attributeBase: defaultAttribute(),
+        dayLog: defaultDayLog(today),
         training: createInitialTrainingProgress(),
+        history: [],
       };
     }
 
     const parsed = JSON.parse(raw) as VitalityPersistedState;
-    const today = todayDate();
+    let attributeBase = toAttr(parsed.attributeBase);
+    let dayLog = parsed.dayLog;
+    let training = parsed.training ?? createInitialTrainingProgress();
+    let history = parsed.history ?? [];
 
-    // New day → reset day log, keep attribute + training progress
-    const dayLog =
-      parsed.dayLog?.date === today
-        ? parsed.dayLog
-        : defaultDayLog(today);
+    // Seal previous day(s) if needed
+    if (dayLog.date && dayLog.date < today && !dayLog.sealed) {
+      const xp = calculateVitalityXp(dayLog).total;
+      if (xp > 0) {
+        attributeBase = applyXpToVitality(attributeBase, xp);
+      }
+      history = [...history, { ...dayLog, sealed: true }].slice(-HISTORY_MAX);
+      dayLog = defaultDayLog(today);
+    } else if (!dayLog.date || dayLog.date > today) {
+      dayLog = defaultDayLog(today);
+    }
 
-    return {
-      attribute: {
-        name: "vitality",
-        level: parsed.attribute.level,
-        currentXp: parsed.attribute.currentXp,
-        xpToNext: parsed.attribute.xpToNext,
-        multiplier: parsed.attribute.multiplier,
-      },
-      dayLog,
-      training: parsed.training ?? createInitialTrainingProgress(),
-    };
+    return { attributeBase, dayLog, training, history };
   } catch {
     return {
-      attribute: defaultAttribute(),
-      dayLog: defaultDayLog(),
+      attributeBase: defaultAttribute(),
+      dayLog: defaultDayLog(today),
       training: createInitialTrainingProgress(),
+      history: [],
     };
   }
 }
 
 export function saveVitalityState(
-  attribute: Attribute,
+  attributeBase: Attribute,
   dayLog: VitalityDayLog,
-  training: TrainingProgress
+  training: TrainingProgress,
+  history: VitalityDayLog[]
 ) {
   const payload: VitalityPersistedState = {
-    attribute: {
-      level: attribute.level,
-      currentXp: attribute.currentXp,
-      xpToNext: attribute.xpToNext,
-      multiplier: attribute.multiplier,
-    },
+    attributeBase: fromAttr(attributeBase),
     dayLog,
     training,
+    history,
   };
   localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+}
+
+/** Live display attribute = base + today's XP (can go up and down during the day) */
+export function displayAttribute(
+  attributeBase: Attribute,
+  dayLog: VitalityDayLog
+): Attribute {
+  const xp = calculateVitalityXp(dayLog).total;
+  if (xp <= 0) return attributeBase;
+  return applyXpToVitality(attributeBase, xp);
 }
