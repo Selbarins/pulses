@@ -42,28 +42,31 @@ function ParticleAttribute({ color, level01 }: { color: string; level01: number 
       positions[i * 3 + 1] = r * Math.sin(incl) * Math.sin(azim);
       positions[i * 3 + 2] = r * Math.cos(incl);
 
-      // Flashy brightness
-      const bright = 1.05 + level01 * 0.45 + Math.random() * 0.2;
-      colorsArr[i * 3] = Math.min(1.4, c.r * bright);
-      colorsArr[i * 3 + 1] = Math.min(1.4, c.g * bright);
-      colorsArr[i * 3 + 2] = Math.min(1.4, c.b * bright);
+      // Brightness + visibility scale with level01 (0 seals → almost dark)
+      const fade = 0.08 + level01 * 0.92;
+      const bright = (0.2 + level01 * 1.1) * (0.85 + Math.random() * 0.3);
+      colorsArr[i * 3]     = Math.min(1.4, c.r * bright * fade);
+      colorsArr[i * 3 + 1] = Math.min(1.4, c.g * bright * fade);
+      colorsArr[i * 3 + 2] = Math.min(1.4, c.b * bright * fade);
     }
     return { positions, colors: colorsArr };
   }, [color, level01]);
 
-  useFrame((state, delta) => {
-  if (!pointsRef.current) return;
+    useFrame((state, delta) => {
+    if (!pointsRef.current) return;
 
-  // Faster base rotation + stronger level influence
-  const speed = 0.28 + level01 * 0.55;
-  pointsRef.current.rotation.y += delta * speed;
-  pointsRef.current.rotation.x += delta * speed * 0.28;
+    // Almost still at 0 seals, full motion at 5
+    const speed = 0.03 + level01 * 0.8;
+    pointsRef.current.rotation.y += delta * speed;
+    pointsRef.current.rotation.x += delta * speed * 0.28;
 
-  // Subtle organic breath / pulse (very small so it stays elegant)
-  const t = state.clock.elapsedTime;
-  const breathe = 1 + Math.sin(t * (1.1 + level01 * 0.6)) * (0.018 + level01 * 0.012);
-  pointsRef.current.scale.setScalar(breathe);
-});
+    // Breath only when there is life
+    const t = state.clock.elapsedTime;
+    const breathe =
+      1 +
+      Math.sin(t * (1.1 + level01 * 0.6)) * (0.004 + level01 * 0.026);
+    pointsRef.current.scale.setScalar(breathe);
+  });
 
   return (
   <points ref={pointsRef}>
@@ -81,7 +84,7 @@ function ParticleAttribute({ color, level01 }: { color: string; level01: number 
         varying float vAlpha;
         void main() {
           vColor = color;
-          vAlpha = 0.85;
+          vAlpha = 0.06 + ${level01.toFixed(3)} * 0.9;
           vec4 mv = modelViewMatrix * vec4(position, 1.0);
           gl_Position = projectionMatrix * mv;
           gl_PointSize = 0.065 * (300.0 / -mv.z);   // slightly larger soft points
