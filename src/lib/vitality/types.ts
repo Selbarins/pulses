@@ -1,7 +1,3 @@
-/**
- * Vitality domain types.
- */
-
 export type TrainingType = "strength" | "other";
 
 export type PracticeId =
@@ -20,42 +16,27 @@ export type HygieneId =
 
 export type MenuSlot = "breakfast" | "lunch" | "dinner" | "snack";
 
-/** Single day’s logged values */
 export interface VitalityDayLog {
-  date: string; // YYYY-MM-DD
-
-  // Glycemia
+  date: string;
   glycemia?: number;
   glycemiaInTarget?: boolean;
-
-  // Sleep
   sleepHours?: number;
   sleepQuality?: 1 | 2 | 3 | 4 | 5;
-
-  // Training — Phase 1 practices practiced today
   practicesToday?: PracticeId[];
   fullSession?: boolean;
-
-  // Nutrition
-  proteinGoal?: number;       // grams target for the day
-  proteinEaten?: number;      // estimated grams
-  proteinHit?: boolean;       // convenience flag
-  menus?: Partial<Record<MenuSlot, string>>; // simple label per slot
-  shoppingNeeded?: string[];  // items still missing
-
-  // Hygiene
+  proteinGoal?: number;
+  proteinEaten?: number;
+  proteinHit?: boolean;
+  menus?: Partial<Record<MenuSlot, string>>;
   hygiene?: Partial<Record<HygieneId, boolean>>;
-
-  // Derived
   energy?: 1 | 2 | 3 | 4 | 5;
+  /** Set true when day is sealed at midnight */
+  sealed?: boolean;
 }
 
-/** Long-term training progress (persists across days) */
 export interface TrainingProgress {
   phase: 1 | 2 | 3;
-  /** How many times each practice has been done in current phase */
   practiceCounts: Record<PracticeId, number>;
-  /** Total sessions completed in current phase */
   sessionsCompleted: number;
   phase1Complete: boolean;
 }
@@ -78,9 +59,10 @@ export interface VitalityMetricDef {
   dailyCap?: number;
 }
 
-/** Everything we persist */
+/** Persisted shape */
 export interface VitalityPersistedState {
-  attribute: {
+  /** Attribute at the start of the current (unsealed) day */
+  attributeBase: {
     level: number;
     currentXp: number;
     xpToNext: number;
@@ -88,4 +70,6 @@ export interface VitalityPersistedState {
   };
   dayLog: VitalityDayLog;
   training: TrainingProgress;
+  /** Sealed past days (newest last) */
+  history: VitalityDayLog[];
 }
