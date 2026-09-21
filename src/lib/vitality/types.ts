@@ -1,13 +1,28 @@
 /**
  * Vitality domain types.
- * Keep pure — no React, no side effects.
  */
 
 export type TrainingType = "strength" | "other";
 
-/** Single day’s logged values (partial = not yet logged) */
+export type PracticeId =
+  | "sit_to_stand"
+  | "hinge"
+  | "push"
+  | "pull"
+  | "carry_core";
+
+export type HygieneId =
+  | "hydration"
+  | "mobility"
+  | "wind_down"
+  | "feet_check"
+  | "sleep_ready";
+
+export type MenuSlot = "breakfast" | "lunch" | "dinner" | "snack";
+
+/** Single day’s logged values */
 export interface VitalityDayLog {
-  date: string; // YYYY-MM-DD (Casablanca)
+  date: string; // YYYY-MM-DD
 
   // Glycemia
   glycemia?: number;
@@ -17,21 +32,34 @@ export interface VitalityDayLog {
   sleepHours?: number;
   sleepQuality?: 1 | 2 | 3 | 4 | 5;
 
-  // Training
-  trained?: boolean;
-  trainingType?: TrainingType;
+  // Training — Phase 1 practices practiced today
+  practicesToday?: PracticeId[];
+  fullSession?: boolean;
 
-  // Nutrition (simple for now)
-  proteinOk?: boolean;
+  // Nutrition
+  proteinGoal?: number;       // grams target for the day
+  proteinEaten?: number;      // estimated grams
+  proteinHit?: boolean;       // convenience flag
+  menus?: Partial<Record<MenuSlot, string>>; // simple label per slot
+  shoppingNeeded?: string[];  // items still missing
 
-  // Hygiene & recovery
-  hygieneDone?: boolean;
+  // Hygiene
+  hygiene?: Partial<Record<HygieneId, boolean>>;
 
-  // Derived (not free input)
+  // Derived
   energy?: 1 | 2 | 3 | 4 | 5;
 }
 
-/** Result of XP calculation for one day */
+/** Long-term training progress (persists across days) */
+export interface TrainingProgress {
+  phase: 1 | 2 | 3;
+  /** How many times each practice has been done in current phase */
+  practiceCounts: Record<PracticeId, number>;
+  /** Total sessions completed in current phase */
+  sessionsCompleted: number;
+  phase1Complete: boolean;
+}
+
 export interface VitalityXpBreakdown {
   glycemia: number;
   sleep: number;
@@ -41,15 +69,23 @@ export interface VitalityXpBreakdown {
   total: number;
 }
 
-/** Editable metric definition (lives in metrics.ts) */
 export interface VitalityMetricDef {
-  id: keyof Omit<VitalityDayLog, "date" | "energy">;
+  id: string;
   label: string;
   description?: string;
-  /** Base XP when the metric is successfully logged / completed */
   baseXp: number;
-  /** Extra XP when a quality condition is met */
   bonusXp?: number;
-  /** Soft daily cap for this metric */
   dailyCap?: number;
+}
+
+/** Everything we persist */
+export interface VitalityPersistedState {
+  attribute: {
+    level: number;
+    currentXp: number;
+    xpToNext: number;
+    multiplier: number;
+  };
+  dayLog: VitalityDayLog;
+  training: TrainingProgress;
 }
