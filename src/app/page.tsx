@@ -1,5 +1,6 @@
 "use client";
 
+import { getVitalityAttributeForHome } from "@/lib/vitality";
 import Link from "next/link";
 import SoulOrb from "@/components/orb/SoulOrb";
 import AttributeOrb from "@/components/orb/AttributeOrb";
@@ -45,17 +46,31 @@ function bezier(p0: number, p1: number, p2: number, t: number) {
 }
 
 export default function Home() {
-  const [attributes] = useState<Attribute[]>(INITIAL);
-  const [streak]     = useState(9);
-  const [inDebt]     = useState(false);
+  const [attributes, setAttributes] = useState<Attribute[]>(INITIAL);
+  const [streak] = useState(9);
+  const [inDebt] = useState(false);
+
+  // Sync vitality from Vitality page storage (localStorage)
+  useEffect(() => {
+    const syncVitality = () => {
+      const vitality = getVitalityAttributeForHome();
+      setAttributes((prev) =>
+        prev.map((a) => (a.name === "vitality" ? vitality : a))
+      );
+    };
+
+    syncVitality(); // on first load
+    window.addEventListener("focus", syncVitality); // back from /vitality
+    return () => window.removeEventListener("focus", syncVitality);
+  }, []);
 
   const realState = orbStateFromStats(attributes, streak, inDebt);
-  const state = {
-    ...realState,
-    energy: 0.92, speed: 1.6, stability: 0.95,
-    vitality: 0.85, wealth: 0.85, focus: 0.7,
-    momentum: 0.8, discipline: 0.8, debt: false,
-  };
+  // Use real stats from attributes (vitality comes from storage)
+const state = {
+  ...realState,
+  // Optional: keep a floor so the orb never looks fully dead while testing
+  energy: Math.max(realState.energy, 0.35),
+};
 
   const level01 = (name: string) => {
     const attr = attributes.find((a) => a.name === name);
