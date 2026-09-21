@@ -38,7 +38,10 @@ export default function LevelProgress({
           <p className="text-[10px] uppercase tracking-wider text-slate-500">
             Today’s haul
           </p>
-          <p className="text-xl font-medium text-pink-300 tabular-nums">
+          <p
+            key={todayXp}
+            className="text-xl font-medium text-pink-300 tabular-nums animate-xp-flash"
+          >
             +{todayXp}
             <span className="text-xs text-pink-400/60 ml-1">XP</span>
           </p>
