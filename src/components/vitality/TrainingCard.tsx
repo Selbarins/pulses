@@ -66,11 +66,11 @@ export default function TrainingCard({
             return (
               <div
                 key={p.id}
-                className={`flex items-center gap-2 rounded-xl border p-2.5 ${
-                  doneToday
-                    ? "border-pink-500/40 bg-pink-500/15"
-                    : "border-slate-700/60 bg-slate-950/50"
-                }`}
+                className={`flex items-center gap-2 rounded-xl border p-2.5 transition-all duration-300 ${
+                doneToday
+                  ? "border-pink-500/40 bg-pink-500/15 animate-row-complete"
+                  : "border-slate-700/60 bg-slate-950/50"
+              }`}
               >
                 <button
                   onClick={() => onToggle(p.id)}
