@@ -1,10 +1,9 @@
-/**
- * Vitality domain — public API.
- * Import from here in components and pages.
- */
-
 export * from "./types";
 export * from "./metrics";
 export * from "./xp";
 export * from "./energy";
 export * from "./leveling";
+export * from "./training";
+export * from "./nutrition";
+export * from "./hygiene";
+export * from "./storage";
