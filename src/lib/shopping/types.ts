@@ -8,7 +8,9 @@ export interface CartItem {
   quantity: number;
   checked: boolean;
   note?: string;
-  createdAt: string;
+  createdAt: string;   // when added
+  checkedAt?: string;  // when marked bought (wealth stats)
+  updatedAt?: string;
 }
 
 export interface ShoppingState {
